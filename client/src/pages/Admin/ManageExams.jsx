@@ -12,7 +12,8 @@ const ManageExams = () => {
     if (!window.confirm('Are you sure you want to delete ALL exams? This action cannot be undone.')) return;
     
     try {
-      const res = await fetch('http://localhost:5000/api/admin/exams/all', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/admin/exams/all`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -35,7 +36,8 @@ const ManageExams = () => {
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/exams/published', {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const res = await fetch(`${apiUrl}/api/exams/published`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await res.json();

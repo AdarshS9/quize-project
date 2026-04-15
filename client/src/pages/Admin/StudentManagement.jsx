@@ -18,7 +18,8 @@ const StudentManagement = () => {
     if (!window.confirm('WARNING: This will delete ALL exams, questions, results, and students. Continue?')) return;
     
     try {
-      const res = await fetch('http://localhost:5000/api/admin/reset-all', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/admin/reset-all`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -33,7 +34,8 @@ const StudentManagement = () => {
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/admin/students', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/admin/students`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
