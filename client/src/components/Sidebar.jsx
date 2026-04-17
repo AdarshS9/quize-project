@@ -4,12 +4,12 @@ import {
   LayoutDashboard, 
   BookOpen, 
   History, 
-  User, 
+  User as UserIcon, 
   LogOut, 
   GraduationCap, 
-  ChevronRight,
   Trophy,
-  BarChart
+  BarChart,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../App';
 
@@ -18,80 +18,96 @@ const Sidebar = ({ role }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    if (window.confirm('Are you sure you want to terminate your session?')) {
+    if (window.confirm('Terminate your active session?')) {
       logout();
       navigate('/login');
     }
   };
 
   const studentLinks = [
-    { to: '/student', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/student/exams', icon: BookOpen, label: 'Exams Hall' },
-    { to: '/student/history', icon: History, label: 'My Progress' },
-    { to: '/student/leaderboard', icon: Trophy, label: 'Leaderboard' },
-    { to: '/student/profile', icon: User, label: 'Profile' },
+    { to: '/student', icon: LayoutDashboard, label: 'Performance' },
+    { to: '/student/exams', icon: BookOpen, label: 'Exams' },
+    { to: '/student/leaderboard', icon: Trophy, label: 'Ranking' },
   ];
 
   const adminLinks = [
-    { to: '/admin', icon: LayoutDashboard, label: 'Admin Panel' },
-    { to: '/admin/exams', icon: BookOpen, label: 'Manage Exams' },
-    { to: '/admin/reports', icon: BarChart, label: 'Exam Reports' },
-    { to: '/admin/students', icon: GraduationCap, label: 'Student Flow' },
+    { to: '/admin', icon: LayoutDashboard, label: 'Overview' },
+    { to: '/admin/exams', icon: BookOpen, label: 'Exams' },
+    { to: '/admin/reports', icon: BarChart, label: 'Results' },
+    { to: '/admin/students', icon: Users, label: 'Students' },
   ];
 
   const links = role === 'ADMIN' ? adminLinks : studentLinks;
 
   return (
-    <aside className="sidebar flex flex-col shadow-2xl shadow-sky-100">
-      <div className="flex items-center gap-4 px-2 mb-12">
-        <div className="w-12 h-12 bg-primary rounded-[18px] flex items-center justify-center shadow-xl shadow-sky-200">
-          <GraduationCap className="text-white" size={28} />
+    <aside style={{ 
+      width: '240px', background: 'white', borderRight: '1px solid var(--border-color)',
+      padding: '2.5rem 1.5rem', display: 'flex', flexDirection: 'column', height: '100vh',
+      position: 'sticky', top: 0
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '3.5rem' }}>
+        <div style={{ 
+          width: '40px', height: '40px', background: 'var(--primary-gradient)', 
+          borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'white', boxShadow: '0 8px 16px -4px rgba(16, 185, 129, 0.3)'
+        }}>
+          <GraduationCap size={24} />
         </div>
-        <div>
-          <h1 className="text-xl font-black text-text-dark tracking-tighter leading-none">ExamPro</h1>
-          <p className="text-[9px] uppercase tracking-widest text-primary font-black mt-1">Enterprise v2</p>
-        </div>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: '800', tracking: '-0.02em', color: 'var(--text-main)' }}>ExamPro</h1>
       </div>
 
-      <nav className="flex-1">
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
         {links.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
-            className={({ isActive }) => `nav-link group ${isActive ? 'active' : ''}`}
+            end={link.to === '/student' || link.to === '/admin'}
+            style={({ isActive }) => ({
+              display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem 1rem',
+              borderRadius: '10px', textDecoration: 'none', transition: 'var(--transition)',
+              background: isActive ? 'var(--bg-light)' : 'transparent',
+              color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+              fontWeight: isActive ? '700' : '600',
+              fontSize: '0.9rem'
+            })}
           >
-            {({ isActive }) => (
-              <>
-                <div className={`p-2 rounded-lg transition-colors ${isActive ? 'bg-primary text-white shadow-lg shadow-sky-100' : 'bg-transparent text-text-muted group-hover:bg-sky-50 group-hover:text-primary'}`}>
-                  {link.icon && <link.icon size={20} />}
-                </div>
-                <span className={`flex-1 text-sm font-bold ${isActive ? 'text-text-dark' : 'text-text-muted'}`}>{link.label}</span>
-                <ChevronRight size={14} className={`transition-all ${isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}`} />
-              </>
-            )}
+            <link.icon size={20} />
+            {link.label}
           </NavLink>
         ))}
       </nav>
 
-      <div className="mt-auto pt-8 border-t border-sky-50/50">
-        <div className="p-5 rounded-[24px] bg-gradient-to-br from-white to-sky-50 border border-white shadow-lg mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black">
-              {user?.name?.[0]}
-            </div>
-            <div className="overflow-hidden">
-               <p className="text-xs font-black text-text-dark truncate">{user?.name}</p>
-               <p className="text-[9px] font-bold text-primary uppercase tracking-widest">{user?.role}</p>
-            </div>
+      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ 
+          display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem',
+          background: 'var(--surface-light)', borderRadius: '12px'
+        }}>
+          <div style={{ 
+            width: '36px', height: '36px', borderRadius: '50%', background: 'white',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '0.8rem', fontWeight: '800', color: 'var(--primary)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+          }}>
+            {user?.name?.[0]}
+          </div>
+          <div style={{ overflow: 'hidden' }}>
+            <p style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)', margin: 0, textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.name}</p>
+            <p style={{ fontSize: '0.65rem', fontWeight: '700', color: 'var(--primary)', textTransform: 'uppercase', margin: 0 }}>{user?.role}</p>
           </div>
         </div>
 
         <button 
           onClick={handleLogout} 
-          className="flex items-center gap-3 px-6 py-4 w-full text-red-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all font-bold text-sm"
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1rem',
+            width: '100%', border: 'none', background: 'transparent', color: '#EF4444',
+            cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', borderRadius: '10px'
+          }}
+          onMouseOver={e => e.currentTarget.style.background = '#FEF2F2'}
+          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
         >
           <LogOut size={18} />
-          <span>Exit Portal</span>
+          Exit Portal
         </button>
       </div>
     </aside>
@@ -99,3 +115,4 @@ const Sidebar = ({ role }) => {
 };
 
 export default Sidebar;
+

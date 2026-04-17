@@ -3,29 +3,22 @@ import {
   FileText, 
   Users, 
   CheckCircle, 
-  Calendar, 
-  TrendingUp, 
-  ArrowUpRight,
-  Target,
-  BarChart
+  TrendingUp,
+  ArrowRight,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '../../App';
+import { API_URL } from '../../config';
 
-const StatCard = ({ icon: Icon, label, value, subtext, color }) => (
-  <div className="glass-card p-8 animate-slide">
-    <div className="flex justify-between items-start mb-6">
-      <div className={`p-4 rounded-2xl ${color} bg-opacity-10 text-${color.split('-')[1]}-600`}>
-        <Icon size={28} />
-      </div>
-      <div className="p-2 bg-green-50 rounded-lg text-green-600">
-        <ArrowUpRight size={16} />
-      </div>
+const StatInline = ({ icon: Icon, label, value }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingRight: '2rem' }}>
+    <div style={{ padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', color: 'var(--primary)' }}>
+      <Icon size={20} />
     </div>
-    <h3 className="text-3xl font-black text-text-dark">{value}</h3>
-    <p className="text-sm font-bold text-text-muted mt-1 uppercase tracking-wider">{label}</p>
-    <p className="text-xs text-green-600 font-semibold mt-4 flex items-center gap-1">
-      {subtext}
-    </p>
+    <div>
+      <p style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{label}</p>
+      <h3 style={{ fontSize: '1.25rem', fontWeight: '700' }}>{value}</h3>
+    </div>
   </div>
 );
 
@@ -36,7 +29,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/admin/stats', {
+        const res = await fetch(`${API_URL}/api/admin/stats`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         if (res.ok) setStats(await res.json());
@@ -48,101 +41,88 @@ const AdminDashboard = () => {
   }, []);
 
   return (
-    <div className="space-y-10 max-w-7xl mx-auto">
-      <header className="flex justify-between items-end bg-white/40 p-10 rounded-[40px] border border-white/60 shadow-xl shadow-sky-100/50">
+    <div className="app-container animate-fade">
+      <header className="section-stack">
         <div>
-          <span className="badge bg-primary/10 text-primary border-primary/20 mb-4 inline-block">Administrator</span>
-          <h1 className="text-4xl font-black text-dark tracking-tight">System Overview</h1>
-          <p className="text-text-muted mt-2 font-medium">Monitoring platform performance and student engagement.</p>
+          <h1 style={{ marginBottom: '0.5rem' }}>Welcome back, {user?.name}</h1>
+          <p>Here's what's happening on your platform today.</p>
         </div>
-        <div className="flex gap-4">
-          <button className="btn-neumorph px-8">System Logs</button>
-          <button className="btn-primary shadow-sky-200">+ Configure Exam</button>
+        
+        <div style={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: '1rem', 
+          background: 'var(--surface-light)', 
+          padding: '1.5rem', 
+          borderRadius: 'var(--radius)', 
+          border: '1px solid var(--border-color)' 
+        }}>
+          <StatInline icon={FileText} label="Active Exams" value={stats.totalExams || 0} />
+          <StatInline icon={Users} label="Total Students" value={stats.totalStudents || 0} />
+          <StatInline icon={CheckCircle} label="Completed" value={stats.totalSubmissions || 0} />
+          <StatInline icon={TrendingUp} label="Avg Score" value="84%" />
         </div>
       </header>
 
-      <div className="grid grid-4 gap-6">
-        <StatCard 
-          icon={FileText} 
-          label="Active Exams" 
-          value={stats.totalExams} 
-          subtext="⚡ 2 Published today"
-          color="bg-sky-500"
-        />
-        <StatCard 
-          icon={Users} 
-          label="Enrollments" 
-          value={stats.totalStudents} 
-          subtext="📈 +12% growth"
-          color="bg-indigo-500"
-        />
-        <StatCard 
-          icon={CheckCircle} 
-          label="Submissions" 
-          value={stats.totalSubmissions} 
-          subtext="✅ 98.4% Completion"
-          color="bg-emerald-500"
-        />
-        <StatCard 
-          icon={Calendar} 
-          label="Scheduled" 
-          value="4" 
-          subtext="🕒 Next in 2h"
-          color="bg-purple-500"
-        />
-      </div>
+      <section className="section-stack">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2>Platform Analytics</h2>
+          <button className="btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}>Last 30 Days</button>
+        </div>
+        
+        <div className="card-clean" style={{ minHeight: '300px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem', padding: '3rem 2rem' }}>
+          {[45, 65, 40, 80, 55, 90, 70, 85, 60, 75].map((h, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ 
+                width: '100%', 
+                height: `${h * 2}px`, 
+                background: 'var(--primary-gradient)', 
+                borderRadius: '8px', 
+                opacity: 0.2 + (h/100),
+                transition: 'var(--transition)'
+              }} />
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>M {i+1}</span>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      <div className="grid grid-3">
-        {/* Performance Chart Placeholder */}
-        <div className="glass-card p-10 col-span-2">
-          <div className="flex justify-between items-center mb-10">
-            <h3 className="text-xl font-black text-text-dark flex items-center gap-2">
-              <BarChart className="text-primary" /> Performance Analytics
-            </h3>
-            <select className="bg-sky-50 text-xs font-bold py-2 px-4 rounded-xl border-none">
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-            </select>
-          </div>
-          
-          <div className="h-64 flex items-end gap-6 px-4">
-             {[40, 70, 45, 90, 65, 80, 55].map((h, i) => (
-               <div key={i} className="flex-1 flex flex-col items-center gap-4">
-                 <div 
-                   className="w-full bg-gradient-to-t from-sky-100 to-primary rounded-xl transition-all hover:scale-105 cursor-pointer shadow-lg shadow-sky-100" 
-                   style={{ height: `${h}%` }}
-                 />
-                 <span className="text-[10px] font-black text-text-muted uppercase">day {i+1}</span>
-               </div>
-             ))}
-          </div>
+      <section className="section-stack">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2>Recent Activity</h2>
+          <button style={{ color: 'var(--primary)', border: 'none', background: 'none', fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem' }}>View All</button>
         </div>
 
-        {/* Global Leaderboard Snapshot */}
-        <div className="glass-card p-10">
-          <h3 className="text-xl font-black text-text-dark mb-8 flex items-center gap-2">
-            <Target className="text-primary" /> Top Performers
-          </h3>
-          <div className="space-y-6">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="flex items-center gap-4">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black ${n === 1 ? 'bg-yellow-100 text-yellow-600' : 'bg-slate-50 text-slate-400'}`}>
-                  {n}
+        <div className="card-clean" style={{ padding: '0' }}>
+          {[
+            { user: 'Sarah Jenkins', action: 'completed Final Physics Exam', time: '2m ago', score: '92%' },
+            { user: 'Michael Chen', action: 'started Biology Quiz', time: '15m ago', score: '-' },
+            { user: 'System', action: 'published "Calculus III Advanced"', time: '1h ago', score: '-' },
+            { user: 'Emily Davis', action: 'requested password reset', time: '3h ago', score: '-' },
+          ].map((item, idx) => (
+            <div key={idx} className="list-row" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '40px', height: '40px', background: 'var(--bg-light)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Activity size={18} color="var(--primary)" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-text-dark">Student {n}</p>
-                  <p className="text-[10px] text-text-muted">98.5% Average Score</p>
-                </div>
-                <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary" style={{ width: '90%' }} />
+                <div>
+                  <p style={{ fontWeight: '600', color: 'var(--text-main)', fontSize: '0.95rem' }}>{item.user}</p>
+                  <p style={{ fontSize: '0.85rem' }}>{item.action}</p>
                 </div>
               </div>
-            ))}
-          </div>
-          <button className="w-full mt-10 p-4 border border-sky-100 rounded-2xl text-xs font-black text-primary hover:bg-sky-50 transition-all uppercase tracking-widest">
-            View All Reports
-          </button>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: '600' }}>{item.score !== '-' ? item.score : ''}</p>
+                <p style={{ fontSize: '0.75rem' }}>{item.time}</p>
+              </div>
+            </div>
+          ))}
         </div>
+      </section>
+
+      <div style={{ textAlign: 'center', paddingTop: '2rem' }}>
+        <button className="btn-emerald" style={{ padding: '1rem 3rem' }}>
+          Create New Exam <ArrowRight size={18} />
+        </button>
       </div>
     </div>
   );

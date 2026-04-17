@@ -28,15 +28,31 @@ router.get('/stats', async (req, res) => {
 
 // Create Exam
 router.post('/exams', async (req, res) => {
-  const { title, description, duration, start_time, end_time, passing_score } = req.body;
+  const { title, description, duration, start_time, end_time, passing_score, assigned_to, published, questions } = req.body;
   const id = uuidv4();
   
+  if (new Date(start_time) >= new Date(end_time)) {
+    return res.status(400).json({ error: 'Start time must be before end time.' });
+  }
+
   try {
     await client.execute({
-      sql: 'INSERT INTO exams (id, title, description, duration, start_time, end_time, passing_score, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      args: [id, title, description, duration, start_time, end_time, passing_score, req.user.id]
+      sql: 'INSERT INTO exams (id, title, description, duration, start_time, end_time, passing_score, assigned_to, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [id, title, description, duration, start_time, end_time, passing_score || 0, assigned_to || 'all', 'published', req.user.id]
     });
-    res.status(201).json({ id, message: 'Exam created' });
+
+    // If questions were sent in the same request, add them
+    if (questions && Array.isArray(questions)) {
+      for (const q of questions) {
+        const qId = uuidv4();
+        await client.execute({
+          sql: 'INSERT INTO questions (id, exam_id, type, text, options, correct_answer, explanation, marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          args: [qId, id, q.type, q.text, JSON.stringify(q.options), q.correct_answer, q.explanation, q.marks]
+        });
+      }
+    }
+
+    res.status(201).json({ id, message: 'Exam created and published' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

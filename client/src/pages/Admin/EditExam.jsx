@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Plus, 
   Trash2, 
@@ -9,27 +9,60 @@ import {
   Layout,
   Code,
   ArrowRight,
-  CheckCircle,
   FileText
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { apiFetch } from '../../utils/api';
 
-const CreateExam = () => {
+const EditExam = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToast();
   
-  const [step, setStep] = useState(1); // 1: Info, 2: Questions
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [examInfo, setExamInfo] = useState({
     title: '', description: '', subject: '', date: '',
     duration: 60, total_marks: 0, 
     start_time: '', end_time: ''
   });
   const [questions, setQuestions] = useState([]);
-  const [qType, setQType] = useState(null); // MCQ, SHORT_ANSWER, CODING
+  const [qType, setQType] = useState(null);
   const [currentQ, setCurrentQ] = useState({ text: '', options: ['', '', '', ''], correct_answer: '', marks: 1 });
-
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchExam = async () => {
+      try {
+        const data = await apiFetch(`/api/exams/${id}`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        // Parse times from ISO strings back to HH:MM if needed
+        const startTime = data.start_time?.split('T')[1]?.substring(0, 5) || '';
+        const endTime = data.end_time?.split('T')[1]?.substring(0, 5) || '';
+        
+        setExamInfo({
+          title: data.title,
+          description: data.description || '',
+          subject: data.subject || '',
+          date: data.date || '',
+          duration: data.duration,
+          total_marks: data.total_marks,
+          start_time: startTime,
+          end_time: endTime
+        });
+        
+        setQuestions(data.questions || []);
+      } catch (err) {
+        addToast('Failed to load exam data', 'error');
+        navigate('/admin/exams');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchExam();
+  }, [id]);
 
   const handleNextStep = () => {
     if (!examInfo.title || !examInfo.subject || !examInfo.date || !examInfo.start_time || !examInfo.end_time) {
@@ -43,54 +76,16 @@ const CreateExam = () => {
     const newQuestions = [...questions, { ...currentQ, type: qType }];
     setQuestions(newQuestions);
     
-    // Update total marks
     const total = newQuestions.reduce((acc, q) => acc + parseInt(q.marks || 0), 0);
     setExamInfo({ ...examInfo, total_marks: total });
     
     addToast('Question added', 'success');
-    // Rapid Add: Reset form fields but keep selected type for bulk entry
+    // Rapid Add: Reset the form but keep the qType to allow adding multiple questions quickly
     setCurrentQ({ text: '', options: ['', '', '', ''], correct_answer: '', marks: 1 });
   };
 
-  const handleExcelImport = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const res = await fetch(`${API_URL}/api/admin/exams/import`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${localStorage.getItem('token')}` 
-        },
-        body: formData
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const newQuestions = [...questions, ...data];
-        setQuestions(newQuestions);
-        
-        const total = newQuestions.reduce((acc, q) => acc + parseInt(q.marks || 0), 0);
-        setExamInfo({ ...examInfo, total_marks: total });
-        
-        addToast(`Imported ${data.length} questions successfully!`, 'success');
-      } else {
-        throw new Error(data.error);
-      }
-    } catch (err) {
-      addToast('Import failed: Check file format', 'error');
-    }
-  };
-
   const handleSave = async () => {
-    // 7. Validation Before API Call
     if (questions.length === 0) return addToast('Please add at least one question', 'error');
-    if (!examInfo.title || !examInfo.subject || !examInfo.date || !examInfo.start_time || !examInfo.end_time) {
-      return addToast('Please complete all scheduling details (Date, Start/End Time)', 'error');
-    }
-
     setIsSaving(true);
 
     const startTimeFull = `${examInfo.date}T${examInfo.start_time}`;
@@ -105,8 +100,8 @@ const CreateExam = () => {
     };
 
     try {
-      await apiFetch('/api/exams', {
-        method: 'POST',
+      await apiFetch(`/api/exams/${id}`, {
+        method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}` 
@@ -114,23 +109,16 @@ const CreateExam = () => {
         body: JSON.stringify(payload)
       });
       
-      addToast('Exam successfully published', 'success');
-      
-      // Clear local state to prevent stale data
-      setQuestions([]);
-      setExamInfo({
-        title: '', description: '', subject: '', date: '',
-        duration: 60, total_marks: 0, 
-        start_time: '', end_time: ''
-      });
-      
+      addToast('Exam updated successfully', 'success');
       navigate('/admin/exams');
     } catch (err) {
-      addToast(err.message || 'Failed to save exam', 'error');
+      addToast(err.message || 'Failed to update exam', 'error');
     } finally {
       setIsSaving(false);
     }
   };
+
+  if (loading) return <div className="app-container" style={{ textAlign: 'center', padding: '10rem' }}><p>Loading assessment...</p></div>;
 
   return (
     <div className="app-container animate-fade">
@@ -141,8 +129,8 @@ const CreateExam = () => {
         >
           <ChevronLeft size={16} /> {step === 1 ? 'Back to Registry' : 'Edit Configuration'}
         </button>
-        <h1 style={{ fontSize: '2.5rem' }}>{step === 1 ? 'Schedule Exam' : 'Build Question Bank'}</h1>
-        <p>Design your examination with precision and clarity.</p>
+        <h1 style={{ fontSize: '2.5rem' }}>{step === 1 ? 'Modify Assessment' : 'Refine Question Bank'}</h1>
+        <p>Ensure your examination remains accurate and challenging.</p>
         
         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '2rem' }}>
           <div style={{ width: '40px', height: '6px', borderRadius: '100px', background: 'var(--primary)' }} />
@@ -165,7 +153,6 @@ const CreateExam = () => {
                 <label style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Exam Title</label>
                 <input 
                   className="input-clean" 
-                  placeholder="e.g. Final Semester Mathematics" 
                   value={examInfo.title}
                   onChange={e => setExamInfo({...examInfo, title: e.target.value})}
                 />
@@ -175,7 +162,6 @@ const CreateExam = () => {
                 <label style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Subject</label>
                 <input 
                   className="input-clean" 
-                  placeholder="e.g. Mathematics" 
                   value={examInfo.subject}
                   onChange={e => setExamInfo({...examInfo, subject: e.target.value})}
                 />
@@ -224,20 +210,19 @@ const CreateExam = () => {
               <textarea 
                 className="input-clean" 
                 style={{ height: '80px' }}
-                placeholder="Provide instructions for students..." 
                 value={examInfo.description}
                 onChange={e => setExamInfo({...examInfo, description: e.target.value})}
               />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-light)', padding: '1rem', borderRadius: '12px' }}>
-              <span style={{ fontWeight: '700', color: 'var(--text-muted)' }}>Estimated Total Marks:</span>
-              <span style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--primary)' }}>{questions.reduce((acc, q) => acc + parseInt(q.marks || 0), 0)}</span>
+              <span style={{ fontWeight: '700', color: 'var(--text-muted)' }}>Updated Total Marks:</span>
+              <span style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--primary)' }}>{examInfo.total_marks}</span>
             </div>
           </div>
 
           <button className="btn-emerald" style={{ width: '100%', padding: '1.25rem' }} onClick={handleNextStep}>
-            Next: Add Questions <ArrowRight size={18} />
+            Manage Questions <ArrowRight size={18} />
           </button>
         </main>
       ) : (
@@ -245,7 +230,7 @@ const CreateExam = () => {
           <div className="card-clean section-stack">
             {!qType ? (
               <div className="section-stack">
-                <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Select Question Format</h3>
+                <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Add New Question</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
                   {[
                     { id: 'MCQ', icon: Layout, label: 'Multiple Choice' },
@@ -256,31 +241,27 @@ const CreateExam = () => {
                       key={t.id}
                       onClick={() => setQType(t.id)}
                       className="card-clean"
-                      style={{ 
-                        border: '2px solid transparent', cursor: 'pointer',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem',
-                        transition: 'var(--transition)', padding: '2.5rem 1.5rem'
-                      }}
+                      style={{ border: '2px solid transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2.5rem 1.5rem' }}
                       onMouseOver={e => e.currentTarget.style.borderColor = 'var(--primary)'}
                       onMouseOut={e => e.currentTarget.style.borderColor = 'transparent'}
                     >
                       <t.icon size={36} color="var(--primary)" />
-                      <span style={{ fontWeight: '700', fontSize: '1rem' }}>{t.label}</span>
+                      <span style={{ fontWeight: '700' }}>{t.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
             ) : (
               <div className="section-stack">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span className="badge" style={{ background: 'var(--bg-light)', color: 'var(--primary)', fontWeight: '800' }}>{qType} Mode</span>
-                  <button onClick={() => setQType(null)} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '700', cursor: 'pointer', fontSize: '0.75rem' }}>Change Type</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="badge" style={{ background: 'var(--bg-light)', color: 'var(--primary)', fontWeight: '800' }}>New {qType}</span>
+                  <button onClick={() => setQType(null)} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '700', cursor: 'pointer' }}>Cancel</button>
                 </div>
                 
                 <textarea 
                   className="input-clean" 
-                  style={{ height: '140px', fontSize: '1.25rem', fontWeight: '500' }}
-                  placeholder="Draft your question here..."
+                  style={{ height: '140px' }}
+                  placeholder="Question text..."
                   value={currentQ.text}
                   onChange={e => setCurrentQ({...currentQ, text: e.target.value})}
                 />
@@ -302,28 +283,22 @@ const CreateExam = () => {
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', background: 'var(--surface-light)', padding: '1.5rem', borderRadius: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Official Correct Answer</label>
-                    <input 
-                      className="input-clean" 
-                      placeholder="Provide the exact solution..."
-                      value={currentQ.correct_answer}
-                      onChange={e => setCurrentQ({...currentQ, correct_answer: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Points/Marks</label>
-                    <input 
-                      type="number" className="input-clean" 
-                      value={currentQ.marks}
-                      onChange={e => setCurrentQ({...currentQ, marks: e.target.value})}
-                    />
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+                  <input 
+                    className="input-clean" 
+                    placeholder="Correct Answer..."
+                    value={currentQ.correct_answer}
+                    onChange={e => setCurrentQ({...currentQ, correct_answer: e.target.value})}
+                  />
+                  <input 
+                    type="number" className="input-clean" 
+                    value={currentQ.marks}
+                    onChange={e => setCurrentQ({...currentQ, marks: e.target.value})}
+                  />
                 </div>
 
                 <button className="btn-emerald" onClick={addQuestion}>
-                  <Plus size={18} /> Add to Board
+                  <Plus size={18} /> Add Question
                 </button>
               </div>
             )}
@@ -331,49 +306,36 @@ const CreateExam = () => {
 
           <div className="section-stack" style={{ marginTop: '2.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.5rem' }}>Active Question List ({questions.length})</h2>
-              {questions.length > 0 && (
-                <button 
-                  className="btn-emerald" 
-                  onClick={handleSave} 
-                  disabled={isSaving}
-                  style={{ minWidth: '180px', opacity: isSaving ? 0.7 : 1 }}
-                >
-                  {isSaving ? 'Publishing...' : 'Finalize & Publish'}
-                </button>
-              )}
+              <h2>Active Questions ({questions.length})</h2>
+              <button 
+                className="btn-emerald" 
+                onClick={handleSave} 
+                disabled={isSaving}
+                style={{ opacity: isSaving ? 0.7 : 1 }}
+              >
+                {isSaving ? 'Saving Changes...' : 'Save & Exit'}
+              </button>
             </div>
             
-            {questions.length > 0 ? (
-              <div className="section-stack">
-                {questions.map((q, idx) => (
-                  <div key={idx} className="card-clean list-row" style={{ justifyContent: 'space-between', padding: '1.25rem 2rem' }}>
-                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                      <div style={{ width: '30px', height: '30px', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', fontWeight: '800', fontSize: '0.8rem' }}>{idx + 1}</div>
-                      <div>
-                        <p style={{ fontWeight: '600', fontSize: '0.95rem' }}>{q.text.substring(0, 80)}...</p>
-                        <p style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase' }}>{q.type}</p>
-                      </div>
+            <div className="section-stack">
+              {questions.map((q, idx) => (
+                <div key={idx} className="card-clean list-row" style={{ justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ width: '24px', fontWeight: '800' }}>{idx + 1}.</div>
+                    <div>
+                      <p style={{ fontWeight: '600' }}>{q.text.substring(0, 100)}...</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: '800' }}>{q.type} • {q.marks} pts</p>
                     </div>
-                    <button 
-                      onClick={() => setQuestions(questions.filter((_, i) => i !== idx))}
-                      style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', padding: '0.5rem' }}
-                    >
-                      <Trash2 size={20} />
-                    </button>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="card-clean" style={{ textAlign: 'center', padding: '4rem', borderStyle: 'dashed' }}>
-                <UploadCloud size={40} style={{ margin: '0 auto 1rem', opacity: 0.2, color: 'var(--primary)' }} />
-                <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>No questions added yet. Construct your first one above or import.</p>
-                <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <FileText size={18} /> Bulk Import (.xlsx)
-                  <input type="file" accept=".xlsx, .xls" style={{ display: 'none' }} onChange={handleExcelImport} />
-                </label>
-              </div>
-            )}
+                  <button 
+                    onClick={() => setQuestions(questions.filter((_, i) => i !== idx))}
+                    style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer' }}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </main>
       )}
@@ -381,6 +343,4 @@ const CreateExam = () => {
   );
 };
 
-export default CreateExam;
-
-
+export default EditExam;

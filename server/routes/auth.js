@@ -34,6 +34,7 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  console.log(`Login attempt for: ${email}`);
 
   try {
     const result = await client.execute({
@@ -42,11 +43,18 @@ router.post('/login', async (req, res) => {
     });
 
     const user = result.rows[0];
-    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+    if (!user) {
+      console.log('Login failed: User not found');
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
+    if (!isMatch) {
+      console.log('Login failed: Password mismatch');
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
 
+    console.log(`Login successful for: ${email}`);
     const token = jwt.sign(
       { id: user.id, role: user.role, name: user.name },
       JWT_SECRET,

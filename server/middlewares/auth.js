@@ -14,14 +14,17 @@ const authenticate = (req, res, next) => {
 };
 
 const isAdmin = (req, res, next) => {
-  if (req.user.role !== 'ADMIN') {
+  const role = req.user?.role?.toString().trim().toUpperCase();
+  if (role !== 'ADMIN') {
+    console.warn(`[Access Denied] User: ${req.user?.email || req.user?.id}, Role: ${role}, Required: ADMIN`);
     return res.status(403).json({ error: 'Forbidden: Admin access required' });
   }
   next();
 };
 
 const isStudent = (req, res, next) => {
-  if (req.user.role !== 'STUDENT') {
+  if (req.user?.role?.toUpperCase() !== 'STUDENT') {
+    console.warn(`[Access Denied] User Role: ${req.user?.role}, Required: STUDENT`);
     return res.status(403).json({ error: 'Forbidden: Student access required' });
   }
   next();

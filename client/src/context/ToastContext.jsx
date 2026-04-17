@@ -21,33 +21,37 @@ export const ToastProvider = ({ children }) => {
   };
 
   const icons = {
-    success: <CheckCircle className="text-emerald-500" size={20} />,
-    error: <AlertCircle className="text-red-500" size={20} />,
-    info: <Info className="text-primary" size={20} />,
-    warning: <Bell className="text-yellow-500" size={20} />,
-  };
-
-  const bgColors = {
-    success: 'bg-emerald-50 border-emerald-100',
-    error: 'bg-red-50 border-red-100',
-    info: 'bg-sky-50 border-sky-100',
-    warning: 'bg-yellow-50 border-yellow-100',
+    success: <CheckCircle style={{ color: 'var(--primary)' }} size={20} />,
+    error: <AlertCircle style={{ color: '#EF4444' }} size={20} />,
+    info: <Info style={{ color: 'var(--primary)' }} size={20} />,
+    warning: <Bell style={{ color: '#F59E0B' }} size={20} />,
   };
 
   return (
     <ToastContext.Provider value={{ addToast }}>
       {children}
-      <div className="fixed bottom-8 right-8 z-[1000] flex flex-col gap-4 max-w-sm w-full">
+      <div style={{ 
+        position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 9999,
+        display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '380px', width: '100%'
+      }}>
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-4 p-5 rounded-2xl border shadow-2xl animate-slide-in whitespace-pre-wrap ${bgColors[toast.type] || bgColors.info} bg-white`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem 1.5rem',
+              background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(12px)',
+              border: '1px solid var(--border-color)', borderRadius: '16px',
+              boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.1)',
+              animation: 'toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+            }}
           >
-            <div className="shrink-0">{icons[toast.type] || icons.info}</div>
-            <p className="flex-1 text-sm font-bold text-text-dark">{toast.message}</p>
+            <div style={{ flexShrink: 0 }}>{icons[toast.type] || icons.info}</div>
+            <p style={{ flex: 1, margin: 0, fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)', lineHeight: '1.4' }}>
+              {toast.message}
+            </p>
             <button
               onClick={() => removeToast(toast.id)}
-              className="p-1 hover:bg-black/5 rounded-lg transition-colors text-text-muted"
+              style={{ padding: '0.25rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', borderRadius: '6px' }}
             >
               <X size={16} />
             </button>
@@ -55,14 +59,12 @@ export const ToastProvider = ({ children }) => {
         ))}
       </div>
       <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .animate-slide-in {
-          animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        @keyframes toastIn {
+          from { transform: translateX(100%) scale(0.9); opacity: 0; }
+          to { transform: translateX(0) scale(1); opacity: 1; }
         }
       `}</style>
     </ToastContext.Provider>
   );
 };
+

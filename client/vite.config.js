@@ -7,6 +7,13 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     port: 5173,
-    open: true // Automatically try to open in the browser
+    open: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   }
 })

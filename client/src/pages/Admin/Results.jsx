@@ -1,36 +1,69 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
-  BarChart, 
   Search, 
   Download, 
-  User, 
   CheckCircle2, 
   XCircle, 
   ChevronRight,
   TrendingUp,
-  Award
+  Award,
+  FileText
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { API_URL } from '../../config';
+
+const ReportCard = ({ result, onReport }) => {
+  const passed = result.score >= result.passing_score;
+  
+  return (
+    <div className="card-clean list-row" style={{ justifyContent: 'space-between', padding: '1.5rem 2rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <div style={{ 
+          width: '48px', height: '48px', background: 'var(--bg-light)', 
+          borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: passed ? 'var(--primary)' : '#EF4444'
+        }}>
+          {passed ? <CheckCircle2 size={24} /> : <XCircle size={24} />}
+        </div>
+        <div>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.2rem' }}>{result.name}</h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            Attempted: {result.exam_title} • {new Date(result.submit_time).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+      
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ fontSize: '1.25rem', fontWeight: '800', color: passed ? 'var(--primary)' : '#EF4444', margin: 0 }}>{result.score}</p>
+          <p style={{ fontSize: '0.65rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Points Scored</p>
+        </div>
+        <button className="btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.75rem' }} onClick={() => onReport(result.id)}>
+          Report <ChevronRight size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const AdminResults = () => {
   const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { addToast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/admin/attempts', {
+        const res = await fetch(`${API_URL}/api/admin/attempts`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await res.json();
         if (res.ok) setResults(data);
       } catch (err) {
         addToast('Failed to load reports', 'error');
-      } finally {
-        setLoading(false);
       }
     };
     fetchResults();
@@ -45,130 +78,80 @@ const AdminResults = () => {
   const passRate = results.length > 0 ? ((results.filter(r => r.score >= r.passing_score).length / results.length) * 100).toFixed(1) : 0;
 
   return (
-    <div className="space-y-10 max-w-7xl mx-auto animate-fade-in pb-20">
-      <header className="flex justify-between items-end">
+    <div className="app-container animate-fade">
+      <header className="section-stack" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="text-4xl font-black text-text-dark tracking-tight">Examination Reports</h1>
-          <p className="text-text-muted mt-2 font-medium">Detailed candidate performance and per-question analytics.</p>
+          <h1>Performance Insights</h1>
+          <p>Global analytics and individual candidate transcripts.</p>
         </div>
-        <div className="flex gap-4">
-           <button className="btn-neumorph px-8 flex items-center gap-2"><Download size={18} /> Export Bulk PDF</button>
-           <button className="btn-primary px-8 shadow-sky-200">Generate Insights</button>
-        </div>
+        <button className="btn-secondary" onClick={() => addToast('Exporting data...', 'info')}>
+          <Download size={18} /> Export Results
+        </button>
       </header>
 
-      {/* Analytics Overview */}
-      <div className="grid md:grid-cols-3 gap-8">
-         <div className="glass-card p-10 bg-white border-white flex items-center gap-8">
-            <div className="w-16 h-16 rounded-[24px] bg-sky-50 text-primary flex items-center justify-center shadow-inner">
-               <TrendingUp size={32} />
-            </div>
-            <div>
-               <p className="text-[10px] font-black uppercase text-text-muted tracking-widest">Average Platform Score</p>
-               <h3 className="text-3xl font-black text-text-dark">{avgScore}%</h3>
-            </div>
-         </div>
-         <div className="glass-card p-10 bg-white border-white flex items-center gap-8">
-            <div className="w-16 h-16 rounded-[24px] bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-inner">
-               <Award size={32} />
-            </div>
-            <div>
-               <p className="text-[10px] font-black uppercase text-text-muted tracking-widest">Global Pass Rate</p>
-               <h3 className="text-3xl font-black text-text-dark">{passRate}%</h3>
-            </div>
-         </div>
-         <div className="glass-card p-10 bg-white border-white flex items-center gap-8">
-            <div className="w-16 h-16 rounded-[24px] bg-purple-50 text-purple-600 flex items-center justify-center shadow-inner">
-               <Users size={32} />
-            </div>
-            <div>
-               <p className="text-[10px] font-black uppercase text-text-muted tracking-widest">Total Submissions</p>
-               <h3 className="text-3xl font-black text-text-dark">{results.length}</h3>
-            </div>
-         </div>
-      </div>
+      <section className="section-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginTop: '2.5rem' }}>
+        <div className="card-clean" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', padding: '1.5rem' }}>
+          <div style={{ width: '48px', height: '48px', background: 'var(--bg-light)', color: 'var(--primary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={24} />
+          </div>
+          <div>
+            <p style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Avg. Score</p>
+            <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{avgScore}%</h2>
+          </div>
+        </div>
+        <div className="card-clean" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', padding: '1.5rem' }}>
+          <div style={{ width: '48px', height: '48px', background: 'var(--bg-light)', color: 'var(--primary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Award size={24} />
+          </div>
+          <div>
+            <p style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Pass Rate</p>
+            <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{passRate}%</h2>
+          </div>
+        </div>
+        <div className="card-clean" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', padding: '1.5rem' }}>
+          <div style={{ width: '48px', height: '48px', background: 'var(--bg-light)', color: 'var(--primary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Users size={24} />
+          </div>
+          <div>
+            <p style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Submissions</p>
+            <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{results.length}</h2>
+          </div>
+        </div>
+      </section>
 
-      {/* Main Results Table */}
-      <div className="glass-card bg-white border-white overflow-hidden shadow-2xl shadow-sky-100/50">
-         <div className="p-8 border-b border-sky-50 flex justify-between items-center bg-sky-50/10">
-            <h3 className="text-lg font-black text-text-dark uppercase tracking-widest">Candidate Transcripts</h3>
-            <div className="relative">
-               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-               <input 
-                 placeholder="Filter by name or exam title..." 
-                 className="pl-12 py-3 bg-white border border-sky-50 rounded-xl text-xs font-bold w-64 shadow-sm"
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-               />
-            </div>
-         </div>
+      <div style={{ marginTop: '2.5rem' }}>
+        <div style={{ position: 'relative', marginBottom: '2rem' }}>
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} style={{ pointerEvents: 'none' }} />
+          <input 
+            type="text"
+            placeholder="Search candidate or exam..."
+            className="input-clean"
+            style={{ paddingLeft: '3rem' }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-         <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[800px]">
-              <thead>
-                <tr className="bg-sky-50/50 text-text-muted uppercase text-[10px] font-black tracking-widest">
-                  <th className="px-10 py-6">Candidate</th>
-                  <th className="px-10 py-6">Examination</th>
-                  <th className="px-10 py-6">Status</th>
-                  <th className="px-10 py-6">Score</th>
-                  <th className="px-10 py-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-sky-50">
-                {filteredResults.map((r) => {
-                  const passed = r.score >= r.passing_score;
-                  return (
-                    <tr key={r.id} className="hover:bg-sky-50/20 transition-all group">
-                      <td className="px-10 py-8">
-                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-400 flex items-center justify-center font-black group-hover:bg-primary group-hover:text-white transition-all shadow-inner">
-                               {r.name.split(' ').map(n => n[0]).join('')}
-                            </div>
-                            <div>
-                               <p className="font-black text-text-dark">{r.name}</p>
-                               <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">{r.email}</p>
-                            </div>
-                         </div>
-                      </td>
-                      <td className="px-10 py-8">
-                         <p className="font-bold text-text-dark">{r.exam_title}</p>
-                         <p className="text-[10px] text-text-muted font-bold">{new Date(r.submit_time).toLocaleDateString()}</p>
-                      </td>
-                      <td className="px-10 py-8">
-                         {passed ? (
-                           <div className="flex items-center gap-2 text-emerald-500">
-                             <CheckCircle2 size={16} />
-                             <span className="text-sm font-black uppercase tracking-widest">Passed</span>
-                           </div>
-                         ) : (
-                           <div className="flex items-center gap-2 text-red-500">
-                             <XCircle size={16} />
-                             <span className="text-sm font-black uppercase tracking-widest">Failed</span>
-                           </div>
-                         )}
-                      </td>
-                      <td className="px-10 py-8">
-                         <div className="flex flex-col gap-2 w-32">
-                            <p className={`text-xl font-black ${passed ? 'text-emerald-500' : 'text-red-500'}`}>{r.score}</p>
-                            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                               <div className={`h-full ${passed ? 'bg-emerald-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, (r.score / (r.passing_score || 100)) * 100)}%` }} />
-                            </div>
-                         </div>
-                      </td>
-                      <td className="px-10 py-8 text-right">
-                         <button className="p-4 bg-sky-50/50 text-primary rounded-2xl hover:bg-primary hover:text-white transition-all group-hover:shadow-lg shadow-sky-100 flex items-center gap-2 ml-auto font-black text-[10px] uppercase tracking-widest">
-                            Report <ChevronRight size={14} />
-                         </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-         </div>
+        <section className="section-stack">
+          {filteredResults.length > 0 ? (
+            filteredResults.map((result) => (
+              <ReportCard 
+                key={result.id} 
+                result={result} 
+                onReport={(id) => navigate(`/admin/reports/${id}`)}
+              />
+            ))
+          ) : (
+            <div className="card-clean" style={{ textAlign: 'center', padding: '4rem' }}>
+              <FileText size={48} style={{ margin: '0 auto 1.5rem', opacity: 0.1 }} />
+              <p style={{ color: 'var(--text-muted)' }}>No submission records available.</p>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
 };
 
 export default AdminResults;
+

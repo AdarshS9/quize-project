@@ -16,7 +16,8 @@ import ExamView from './pages/Student/ExamView';
 import Results from './pages/Student/Results';
 import Sidebar from './components/Sidebar';
 import StudentManagement from './pages/Admin/StudentManagement';
-
+import ResultDetail from './pages/Admin/ResultDetail';
+import EditExam from './pages/Admin/EditExam';
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -24,8 +25,8 @@ export const useAuth = () => useContext(AuthContext);
 const ProtectedRoute = ({ children, role }) => {
   const { user, loading } = useAuth();
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-sky-50">
-       <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-light)' }}>
+       <div style={{ width: '48px', height: '48px', border: '3px solid var(--bg-light)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
     </div>
   );
   if (!user) return <Navigate to="/login" />;
@@ -58,14 +59,16 @@ const AppContent = () => {
           
           <Route path="/admin/*" element={
             <ProtectedRoute role="ADMIN">
-              <div className="flex bg-sky-50/30 min-h-screen">
+              <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--surface-light)' }}>
                 <Sidebar role="ADMIN" />
-                <main className="main-content w-full">
+                <main style={{ flex: 1, overflowY: 'auto' }}>
                   <Routes>
                     <Route path="/" element={<AdminDashboard />} />
                     <Route path="/exams" element={<ManageExams />} />
                     <Route path="/exams/create" element={<CreateExam />} />
+                    <Route path="/exams/edit/:id" element={<EditExam />} />
                     <Route path="/reports" element={<AdminResults />} />
+                    <Route path="/reports/:attemptId" element={<ResultDetail />} />
                     <Route path="/students" element={<StudentManagement />} />
                   </Routes>
                 </main>
@@ -75,9 +78,9 @@ const AppContent = () => {
 
           <Route path="/student/*" element={
             <ProtectedRoute role="STUDENT">
-              <div className="flex bg-sky-50/30 min-h-screen">
+              <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--surface-light)' }}>
                 <Sidebar role="STUDENT" />
-                <main className="main-content w-full">
+                <main style={{ flex: 1, overflowY: 'auto' }}>
                   <Routes>
                     <Route path="/" element={<StudentDashboard />} />
                     <Route path="/exams" element={<StudentExams />} />
@@ -112,3 +115,4 @@ const App = () => (
 );
 
 export default App;
+

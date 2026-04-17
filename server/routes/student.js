@@ -6,6 +6,31 @@ const { authenticate, isStudent } = require('../middlewares/auth');
 
 router.use(authenticate, isStudent);
 
+// Get student's assigned exams (Upcoming & Live)
+router.get('/exams', async (req, res) => {
+  try {
+    const nowUtc = new Date().toISOString();
+    const result = await client.execute({
+      sql: `
+        SELECT e.*, 
+        (SELECT COUNT(*) FROM questions q WHERE q.exam_id = e.id) as question_count,
+        a.status as attempt_status
+        FROM exams e
+        LEFT JOIN attempts a ON e.id = a.exam_id AND a.user_id = ?
+        WHERE e."status" = 'published' 
+        AND (e.assigned_to = 'all' OR e.id IN (SELECT exam_id FROM exam_assignments WHERE student_id = ?))
+        AND e."end_time" >= ?
+        ORDER BY e."start_time" ASC
+      `,
+      args: [req.user.id, req.user.id, nowUtc]
+    });
+    
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get Student Dashboard Stats
 router.get('/dashboard', async (req, res) => {
   try {

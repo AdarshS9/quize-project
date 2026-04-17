@@ -1,47 +1,97 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Globe, Lock, Link as LinkIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Globe, Lock, Link as LinkIcon, FileText, ChevronRight } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { apiFetch } from '../../utils/api';
+
+const ExamRow = ({ exam, onCopy, onEdit, onDelete }) => (
+  <div className="card-clean list-row" style={{ justifyContent: 'space-between', padding: '1.5rem 2rem', marginBottom: '1rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+      <div style={{ 
+        width: '48px', height: '48px', background: 'var(--bg-light)', 
+        borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: exam.status === 'published' ? 'var(--primary)' : 'var(--text-muted)'
+      }}>
+        {exam.status === 'published' ? <Globe size={24} /> : <Lock size={24} />}
+      </div>
+      <div>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <h3 style={{ fontSize: '1.1rem', margin: 0 }}>{exam.title}</h3>
+          <span className="badge" style={{ 
+            fontSize: '0.6rem', 
+            background: exam.status === 'published' ? 'var(--bg-light)' : '#F3F4F6', 
+            color: exam.status === 'published' ? 'var(--primary)' : '#6B7280' 
+          }}>
+            {exam.status}
+          </span>
+        </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+          {exam.subject || 'General'} • {exam.duration}m • {new Date(exam.date).toLocaleDateString()} • {exam.question_count} Questions
+        </p>
+      </div>
+    </div>
+    
+    <div style={{ display: 'flex', gap: '0.75rem' }}>
+      <button 
+        onClick={() => onCopy(exam.id)}
+        className="btn-secondary" 
+        style={{ padding: '0.5rem', borderRadius: '8px' }}
+        title="Copy Exam Link"
+      >
+        <LinkIcon size={18} />
+      </button>
+      <button 
+        onClick={() => onEdit(exam.id)}
+        className="btn-secondary" 
+        style={{ padding: '0.5rem', borderRadius: '8px' }}
+        title="Edit Exam"
+      >
+        <Edit size={18} />
+      </button>
+      <button 
+        onClick={() => onDelete(exam.id)}
+        className="btn-secondary" 
+        style={{ padding: '0.5rem', borderRadius: '8px', color: '#DC2626' }}
+        title="Delete Exam"
+      >
+        <Trash2 size={18} />
+      </button>
+    </div>
+  </div>
+);
 
 const ManageExams = () => {
   const [exams, setExams] = useState([]);
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  const handleDeleteAll = async () => {
-    if (!window.confirm('Are you sure you want to delete ALL exams? This action cannot be undone.')) return;
-    
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/admin/exams/all`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (res.ok) {
-        setExams([]);
-        addToast('All exams have been deleted.', 'success');
-      }
-    } catch (err) {
-      console.error(err);
-      addToast('Failed to delete exams.', 'error');
-    }
-  };
-
   const handleCopyLink = (examId) => {
     const link = `${window.location.origin}/student/exam/${examId}`;
     navigator.clipboard.writeText(link);
-    addToast('Exam link copied to clipboard!', 'success');
+    addToast('Exam link copied!', 'success');
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this exam?')) return;
+    try {
+      await apiFetch(`/api/exams/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      setExams(exams.filter(e => e.id !== id));
+      addToast('Exam deleted', 'success');
+    } catch (err) {
+      addToast(err.message || 'Delete failed', 'error');
+    }
   };
 
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const res = await fetch(`${apiUrl}/api/exams/published`, {
+        const data = await apiFetch('/api/exams', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
-        const data = await res.json();
-        if (res.ok) setExams(data);
+        setExams(data);
       } catch (err) {
         console.error(err);
       }
@@ -50,84 +100,38 @@ const ManageExams = () => {
   }, []);
 
   return (
-    <div className="space-y-10 animate-fade-in">
-      <header className="flex justify-between items-end">
+    <div className="app-container animate-fade">
+      <header className="section-stack" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">Exam Management</h1>
-          <p className="text-text-muted mt-2">Create, edit, and publish your examination papers.</p>
+          <h1>Exam Registry</h1>
+          <p>Configure and distribute your assessments.</p>
         </div>
-        <div className="flex gap-4">
-          <button onClick={handleDeleteAll} className="btn bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white">
-            <Trash2 size={20} /> Delete All
-          </button>
-          <button onClick={() => navigate('/admin/exams/create')} className="btn btn-primary">
-            <Plus size={20} /> Create New Exam
-          </button>
-        </div>
+        <button className="btn-emerald" onClick={() => navigate('/admin/exams/create')}>
+          <Plus size={20} /> Create New
+        </button>
       </header>
 
-      <div className="glass-card overflow-hidden">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-glass text-text-muted uppercase text-xs font-bold tracking-wider">
-              <th className="px-6 py-4">Title</th>
-              <th className="px-6 py-4">Duration</th>
-              <th className="px-6 py-4">Questions</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-glass-border">
-            {exams.map((exam) => (
-              <tr key={exam.id} className="hover:bg-glass/50 transition-colors">
-                <td className="px-6 py-4">
-                  <p className="font-bold text-white">{exam.title}</p>
-                  <p className="text-xs text-text-muted">ID: {exam.id.slice(0, 8)}...</p>
-                </td>
-                <td className="px-6 py-4 text-text-muted font-mono">{exam.duration}m</td>
-                <td className="px-6 py-4">
-                   <span className="badge badge-success bg-primary/10 text-primary border-primary/20">{exam.question_count} Items</span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    {exam.published ? (
-                      <><Globe size={14} className="text-emerald-500" /> <span className="text-sm">Published</span></>
-                    ) : (
-                      <><Lock size={14} className="text-warning" /> <span className="text-sm">Draft</span></>
-                    )}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => handleCopyLink(exam.id)}
-                      className="p-2 hover:bg-glass rounded-lg text-emerald-500 transition-colors"
-                      title="Copy Exam Link"
-                    >
-                      <LinkIcon size={18} />
-                    </button>
-                    <button className="p-2 hover:bg-glass rounded-lg text-primary transition-colors">
-                      <Edit size={18} />
-                    </button>
-                    <button className="p-2 hover:bg-glass rounded-lg text-accent transition-colors">
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {exams.length === 0 && (
-              <tr>
-                <td colSpan="5" className="px-6 py-20 text-center text-text-muted italic">
-                  No exams found. Click "Create New Exam" to get started.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <section className="section-stack" style={{ marginTop: '2rem' }}>
+        {exams.length > 0 ? (
+          exams.map((exam) => (
+            <ExamRow 
+              key={exam.id} 
+              exam={exam} 
+              onCopy={handleCopyLink}
+              onEdit={(id) => navigate(`/admin/exams/edit/${id}`)}
+              onDelete={handleDelete}
+            />
+          ))
+        ) : (
+          <div className="card-clean" style={{ textAlign: 'center', padding: '4rem' }}>
+            <FileText size={48} style={{ margin: '0 auto 1.5rem', opacity: 0.2 }} />
+            <p style={{ color: 'var(--text-muted)' }}>No exams found. Start by creating one.</p>
+          </div>
+        )}
+      </section>
     </div>
   );
 };
 
 export default ManageExams;
+

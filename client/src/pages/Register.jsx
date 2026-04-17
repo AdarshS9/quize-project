@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, GraduationCap, ChevronRight } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, GraduationCap, ChevronRight, ShieldCheck } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { API_URL } from '../config';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -9,17 +11,16 @@ const Register = () => {
     password: '',
     role: 'STUDENT'
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -28,83 +29,88 @@ const Register = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Registration failed');
 
+      addToast('Account created successfully!', 'success');
       navigate('/login');
     } catch (err) {
-      setError(err.message);
+      addToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-indigo-50 to-sky-50">
-      <div className="glass-card w-full max-w-[540px] p-12 animate-slide">
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-xl shadow-sky-200 mb-6">
-            <GraduationCap className="text-white" size={36} />
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-light)', padding: '2rem' }}>
+      <div className="card-clean animate-fade" style={{ width: '100%', maxWidth: '440px', padding: '3rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ 
+            width: '56px', height: '56px', background: 'var(--primary-gradient)', 
+            borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 1.5rem', color: 'white', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)'
+          }}>
+            <GraduationCap size={32} />
           </div>
-          <h1 className="text-3xl font-black text-text-dark text-center mb-2">Join ExamPro</h1>
-          <p className="text-text-muted text-center">Create your account to start achieving your goals.</p>
+          <h1 style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>Create Account</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Join the next generation of online learning.</p>
         </div>
 
-        {error && (
-          <div className="w-full bg-red-50 border border-red-100 text-red-500 p-4 rounded-xl text-xs font-bold mb-8">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/40" size={18} />
-                <input
-                  type="text"
-                  required
-                  className="pl-12 py-3 bg-white border-transparent focus:border-primary shadow-sm"
-                  placeholder="John Doe"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
+        <form onSubmit={handleSubmit} className="section-stack">
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Full Name</label>
+            <div style={{ position: 'relative' }}>
+              <UserIcon size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                required
+                className="input-clean"
+                style={{ paddingLeft: '3rem' }}
+                placeholder="John Doe"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Account Role</label>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Account Path</label>
+            <div style={{ position: 'relative' }}>
+              <ShieldCheck size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <select
-                className="py-3 bg-white border-transparent focus:border-primary shadow-sm font-bold text-slate-600"
+                className="input-clean"
+                style={{ paddingLeft: '3rem', appearance: 'none', cursor: 'pointer' }}
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               >
-                <option value="STUDENT">Student</option>
-                <option value="ADMIN">Administrator</option>
+                <option value="STUDENT">Student Learner</option>
+                <option value="ADMIN">Platform Administrator</option>
               </select>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/40" size={18} />
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Work Email</label>
+            <div style={{ position: 'relative' }}>
+              <Mail size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="email"
                 required
-                className="pl-12 py-3 bg-white border-transparent focus:border-primary shadow-sm"
-                placeholder="name@example.com"
+                className="input-clean"
+                style={{ paddingLeft: '3rem' }}
+                placeholder="name@company.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Create Password</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/40" size={18} />
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Security Password</label>
+            <div style={{ position: 'relative' }}>
+              <Lock size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="password"
                 required
-                className="pl-12 py-3 bg-white border-transparent focus:border-primary shadow-sm"
+                className="input-clean"
+                style={{ paddingLeft: '3rem' }}
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -115,20 +121,19 @@ const Register = () => {
           <button
             type="submit"
             disabled={loading}
-            className="btn-primary w-full py-4 justify-center group text-lg mt-4 shadow-xl shadow-sky-200"
+            className="btn-emerald"
+            style={{ width: '100%', marginTop: '1rem', padding: '1rem' }}
           >
-            {loading ? 'Creating Account...' : (
-              <>
-                Create Account <ChevronRight className="group-hover:translate-x-1 transition-transform" size={20} />
-              </>
+            {loading ? 'Creating account...' : (
+              <>Create Account <ChevronRight size={18} /></>
             )}
           </button>
         </form>
 
-        <p className="text-center mt-10 text-text-muted text-sm font-medium">
-          Already a member?{' '}
-          <Link to="/login" className="text-primary font-bold hover:underline">
-            Sign In instead
+        <p style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          Already have an account?{' '}
+          <Link to="/login" style={{ color: 'var(--primary)', fontWeight: '700', textDecoration: 'none' }}>
+            Sign In
           </Link>
         </p>
       </div>

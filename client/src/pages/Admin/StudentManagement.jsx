@@ -1,31 +1,63 @@
 import React, { useEffect, useState } from 'react';
-import { Search, UserPlus, FileDown, RotateCw, CheckCircle, XCircle, Share2, RefreshCcw } from 'lucide-react';
+import { Search, UserPlus, FileDown, RotateCw, CheckCircle, RefreshCcw, Link as LinkIcon, User as UserIcon } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { API_URL } from '../../config';
+
+const StudentRow = ({ student, onAction }) => (
+  <div className="card-clean list-row" style={{ justifyContent: 'space-between', padding: '1.25rem 2rem', marginBottom: '1rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+      <div style={{ 
+        width: '48px', height: '48px', background: 'var(--surface-light)', 
+        borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '1rem', fontWeight: '800', color: 'var(--primary)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+      }}>
+        {student.name.charAt(0)}
+      </div>
+      <div>
+        <h3 style={{ fontSize: '1rem', marginBottom: '0.1rem' }}>{student.name}</h3>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{student.email}</p>
+      </div>
+    </div>
+    
+    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary)' }}>
+        <CheckCircle size={14} />
+        Verified
+      </div>
+      <button 
+        onClick={() => onAction(student.id)}
+        className="btn-secondary" 
+        style={{ padding: '0.5rem', borderRadius: '8px' }}
+        title="Sync Student Data"
+      >
+        <RotateCw size={18} />
+      </button>
+    </div>
+  </div>
+);
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { addToast } = useToast();
 
   const handleCopyInvite = () => {
     const link = `${window.location.origin}/register`;
     navigator.clipboard.writeText(link);
-    addToast('Student registration link copied!', 'success');
+    addToast('Invite link copied!', 'success');
   };
 
   const handleResetData = async () => {
-    if (!window.confirm('WARNING: This will delete ALL exams, questions, results, and students. Continue?')) return;
-    
+    if (!window.confirm('Wipe ALL system data? This cannot be undone.')) return;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/admin/reset-all`, {
+      const res = await fetch(`${API_URL}/api/admin/reset-all`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
-        addToast('All data has been wiped.', 'success');
-        fetchStudents();
+        addToast('System reset successful', 'success');
+        setStudents([]);
       }
     } catch (err) {
       addToast('Reset failed', 'error');
@@ -34,16 +66,13 @@ const StudentManagement = () => {
 
   const fetchStudents = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/admin/students`, {
+      const res = await fetch(`${API_URL}/api/admin/students`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
       if (res.ok) setStudents(data);
     } catch (err) {
-      addToast('Failed to fetch students', 'error');
-    } finally {
-      setLoading(false);
+      addToast('Fetch failed', 'error');
     }
   };
 
@@ -52,22 +81,14 @@ const StudentManagement = () => {
   }, []);
 
   const handleExportCSV = () => {
-    const headers = ['Name', 'Email'];
-    const csvContent = [
-      headers.join(','),
-      ...students.map(s => [s.name, s.email].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csvContent = "Name,Email\n" + students.map(s => `${s.name},${s.email}`).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'students_list.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
+    link.href = url;
+    link.download = "students.csv";
     link.click();
-    document.body.removeChild(link);
-    addToast('Students list exported!', 'success');
+    addToast('CSV Exported', 'success');
   };
 
   const filteredStudents = students.filter(s => 
@@ -76,97 +97,58 @@ const StudentManagement = () => {
   );
 
   return (
-    <div className="space-y-10 animate-fade-in">
-      <header className="flex justify-between items-end">
+    <div className="app-container animate-fade">
+      <header className="section-stack" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="text-4xl font-bold font-black tracking-tight text-text-dark">Candidate Console</h1>
-          <p className="text-text-muted mt-2">Manage student access, monitor performance, and grant retakes.</p>
+          <h1>Candidate Console</h1>
+          <p>Monitor and manage student engagement.</p>
         </div>
-        <div className="flex gap-4">
-          <button onClick={handleResetData} className="btn bg-red-50 text-red-500 border-red-100 hover:bg-red-500 hover:text-white flex items-center gap-2">
-            <RefreshCcw size={18} /> Wipe All
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button onClick={handleResetData} className="btn-secondary" style={{ color: '#DC2626' }}>
+            <RefreshCcw size={18} /> Wipe System
           </button>
-          <button onClick={handleCopyInvite} className="btn-neumorph flex items-center gap-2">
-            <Share2 size={18} /> Invite Link
+          <button onClick={handleCopyInvite} className="btn-secondary">
+            <LinkIcon size={18} /> Invite Link
           </button>
-          <button onClick={handleExportCSV} className="btn-neumorph flex items-center gap-2">
-            <FileDown size={18} /> Export CSV
-          </button>
-          <button className="btn-primary flex items-center gap-2">
-            <UserPlus size={18} /> Batch Register
+          <button onClick={handleExportCSV} className="btn-secondary">
+            <FileDown size={18} /> Export
           </button>
         </div>
       </header>
 
-      <div className="glass-card p-6">
-        <div className="relative mb-8">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
+      <div style={{ marginTop: '2.5rem' }}>
+        <div style={{ position: 'relative', marginBottom: '2rem' }}>
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} style={{ pointerEvents: 'none' }} />
           <input 
             type="text"
-            placeholder="Search by name or email address..."
-            className="w-full py-5 pl-16 pr-8 bg-sky-50/50 border-sky-100/50 focus:bg-white text-lg font-medium"
+            placeholder="Search by name or email..."
+            className="input-clean"
+            style={{ paddingLeft: '3rem' }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-sky-100">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-sky-50/50 text-text-muted uppercase text-[10px] font-black tracking-widest">
-                <th className="px-8 py-5">Profile</th>
-                <th className="px-8 py-5">Status</th>
-                <th className="px-8 py-5">Verified</th>
-                <th className="px-8 py-5 text-right">Settings</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-sky-50">
-              {filteredStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-sky-50/30 transition-colors group">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary-deep text-white flex items-center justify-center font-black text-xl shadow-lg shadow-sky-100">
-                        {student.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-text-dark text-lg">{student.name}</p>
-                        <p className="text-sm text-text-muted">{student.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <span className="badge badge-completed flex w-fit items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                      Active Student
-                    </span>
-                  </td>
-                  <td className="px-8 py-6">
-                    <CheckCircle size={20} className="text-green-500" />
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <button className="p-3 hover:bg-white rounded-xl text-primary transition-all border border-transparent hover:border-sky-100 hover:shadow-sm">
-                      <RotateCw size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredStudents.length === 0 && (
-                <tr>
-                  <td colSpan="4" className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center opacity-40">
-                      <XCircle size={48} className="text-text-muted mb-4" />
-                      <p className="text-lg font-bold text-text-dark">No Candidates Found</p>
-                      <p className="text-sm text-text-muted">Try adjusting your search filters.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <section className="section-stack">
+          {filteredStudents.length > 0 ? (
+            filteredStudents.map((student) => (
+              <StudentRow 
+                key={student.id} 
+                student={student} 
+                onAction={(id) => addToast('Feature in development', 'info')}
+              />
+            ))
+          ) : (
+            <div className="card-clean" style={{ textAlign: 'center', padding: '4rem' }}>
+              <UserIcon size={48} style={{ margin: '0 auto 1.5rem', opacity: 0.1 }} />
+              <p style={{ color: 'var(--text-muted)' }}>No students registered yet.</p>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
 };
 
 export default StudentManagement;
+

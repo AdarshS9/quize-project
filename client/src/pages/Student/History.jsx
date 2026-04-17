@@ -1,6 +1,41 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History as HistoryIcon, TrendingUp, Calendar, Trophy, Download } from 'lucide-react';
+import { History as HistoryIcon, TrendingUp, Calendar, Trophy, Download, ChevronRight, FileText } from 'lucide-react';
+import { API_URL } from '../../config';
+
+const AttemptCard = ({ attempt, onReview }) => {
+  const passed = attempt.score >= 40; // Assuming 40 is pass
+  
+  return (
+    <div className="card-clean list-row" style={{ justifyContent: 'space-between', padding: '1.5rem 2rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <div style={{ 
+          width: '48px', height: '48px', background: 'var(--bg-light)', 
+          borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: passed ? 'var(--primary)' : '#EF4444'
+        }}>
+          <FileText size={24} />
+        </div>
+        <div>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.2rem' }}>{attempt.title}</h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            Submitted: {new Date(attempt.submit_time || attempt.start_time).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+      
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ fontSize: '1.25rem', fontWeight: '800', color: passed ? 'var(--primary)' : '#EF4444', margin: 0 }}>{attempt.score}%</p>
+          <p style={{ fontSize: '0.65rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Result</p>
+        </div>
+        <button className="btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.75rem' }} onClick={() => onReview(attempt.id)}>
+          Review <ChevronRight size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const StudentHistory = () => {
   const [history, setHistory] = useState([]);
@@ -9,7 +44,7 @@ const StudentHistory = () => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/student/dashboard', {
+        const res = await fetch(`${API_URL}/api/student/dashboard`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         if (res.ok) {
@@ -23,108 +58,62 @@ const StudentHistory = () => {
     fetchHistory();
   }, []);
 
+  const avgScore = history.length > 0 ? (history.reduce((acc, curr) => acc + (curr.score || 0), 0) / history.length).toFixed(1) : 0;
+
   return (
-    <div className="space-y-8 max-w-6xl mx-auto animate-slide">
-      <header className="flex justify-between items-end">
+    <div className="app-container animate-fade">
+      <header className="section-stack" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="text-3xl font-bold text-text-dark">Attempt History</h1>
-          <p className="text-text-muted mt-1">Track your progress and performance over time.</p>
+          <h1>Attempt History</h1>
+          <p>Trace your academic growth and exam milestones.</p>
         </div>
-        <div className="flex gap-4">
-          <button className="btn-neumorph flex items-center gap-2"><Download size={18} /> Export CSV</button>
-        </div>
+        <button className="btn-secondary" onClick={() => navigate('/student/exams')}>
+          Browse Exams
+        </button>
       </header>
 
-      {/* Analytics Summary */}
-      <div className="grid grid-2">
-        <div className="glass-card p-8 bg-gradient-to-br from-primary to-primary-deep text-white">
-          <div className="flex justify-between items-start mb-10">
-            <div>
-              <p className="text-sky-100 text-sm font-medium">Overall Progress</p>
-              <h2 className="text-3xl font-bold mt-1">Excellent</h2>
-            </div>
-            <div className="p-3 bg-white/20 rounded-xl">
-              <TrendingUp size={24} />
-            </div>
+      <section className="section-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginTop: '2.5rem' }}>
+        <div className="card-clean" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', padding: '1.5rem' }}>
+          <div style={{ width: '48px', height: '48px', background: 'var(--bg-light)', color: 'var(--primary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={24} />
           </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Performance Level</span>
-              <span>85%</span>
-            </div>
-            <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
-              <div className="h-full bg-white w-[85%] rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
-            </div>
+          <div>
+            <p style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Global Average</p>
+            <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{avgScore}%</h2>
           </div>
         </div>
-
-        <div className="glass-card p-8 flex items-center justify-center border-dashed border-2 border-sky-100">
-           <div className="text-center">
-             <Trophy size={48} className="text-sky-300 mx-auto mb-4" />
-             <p className="font-bold text-text-dark">Top Performer Badge</p>
-             <p className="text-text-muted text-sm">Ranked in top 10% of users</p>
-           </div>
+        <div className="card-clean" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', padding: '1.5rem' }}>
+          <div style={{ width: '48px', height: '48px', background: 'var(--bg-light)', color: 'var(--primary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Trophy size={24} />
+          </div>
+          <div>
+            <p style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Total Attempts</p>
+            <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{history.length}</h2>
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* History Table */}
-      <div className="glass-card overflow-hidden">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-sky-50 text-text-muted uppercase text-[10px] font-black tracking-widest">
-              <th className="px-8 py-5">Examination</th>
-              <th className="px-8 py-5">Date Attempted</th>
-              <th className="px-8 py-5">Performance Bar</th>
-              <th className="px-8 py-5">Score</th>
-              <th className="px-8 py-5">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-sky-50 bg-white/40">
-            {history.map((h) => (
-              <tr key={h.id} className="hover:bg-white transition-colors">
-                <td className="px-8 py-6">
-                  <p className="font-bold text-text-dark">{h.title}</p>
-                  <p className="text-xs text-text-muted">Drafted by Admin</p>
-                </td>
-                <td className="px-8 py-6 text-text-muted text-sm flex items-center gap-2">
-                  <Calendar size={14} className="text-primary" />
-                  {new Date(h.submit_time || h.start_time).toLocaleDateString()}
-                </td>
-                <td className="px-8 py-6 w-1/4">
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${h.score >= 40 ? 'bg-green-500' : 'bg-red-500'}`}
-                      style={{ width: `${h.score || 0}%` }}
-                    />
-                  </div>
-                </td>
-                <td className="px-8 py-6">
-                  <span className={`text-lg font-black ${h.score >= 40 ? 'text-green-600' : 'text-red-500'}`}>
-                    {h.score ?? 'N/A'}{h.score !== null ? '%' : ''}
-                  </span>
-                </td>
-                <td className="px-8 py-6">
-                  <button 
-                    onClick={() => navigate(`/student/results/${h.id}`)}
-                    className="p-3 bg-sky-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm"
-                  >
-                    <HistoryIcon size={18} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {history.length === 0 && (
-              <tr>
-                <td colSpan="5" className="px-8 py-20 text-center text-text-muted italic bg-white/20">
-                  You haven't attempted any exams yet. Start your journey today!
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div style={{ marginTop: '2.5rem' }}>
+        <section className="section-stack">
+          {history.length > 0 ? (
+            history.map((attempt) => (
+              <AttemptCard 
+                key={attempt.id} 
+                attempt={attempt} 
+                onReview={(id) => navigate(`/student/results/${id}`)}
+              />
+            ))
+          ) : (
+            <div className="card-clean" style={{ textAlign: 'center', padding: '4rem' }}>
+              <HistoryIcon size={48} style={{ margin: '0 auto 1.5rem', opacity: 0.1 }} />
+              <p style={{ color: 'var(--text-muted)' }}>No exam attempts recorded yet.</p>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
 };
 
 export default StudentHistory;
+

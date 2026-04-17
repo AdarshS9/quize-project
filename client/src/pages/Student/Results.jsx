@@ -1,18 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  Trophy, 
   CheckCircle, 
   XCircle, 
   Download, 
   Home, 
-  ArrowRight,
-  TrendingUp,
+  ChevronDown,
+  ChevronUp,
   Award,
-  BookOpen,
-  PieChart,
-  HelpCircle
+  Zap
 } from 'lucide-react';
+import { API_URL } from '../../config';
 
 const Results = () => {
   const { attemptId } = useParams();
@@ -20,163 +18,137 @@ const Results = () => {
   const [report, setReport] = useState(null);
   const [answers, setAnswers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState({});
 
   useEffect(() => {
     const fetchReport = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/student/attempts/${attemptId}/report`, {
+        const res = await fetch(`${API_URL}/api/student/attempts/${attemptId}/report`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await res.json();
         if (res.ok) {
           setReport(data.attempt);
-          setAnswers(data.answers);
-          setLoading(false);
+          setAnswers(data.answers || []);
         }
       } catch (err) {
         console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchReport();
   }, [attemptId]);
 
-  if (loading) return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center animate-pulse">
-       <div className="p-8 bg-sky-50 rounded-[40px] mb-6">
-         <PieChart size={64} className="text-primary" />
-       </div>
-       <h2 className="text-2xl font-black text-text-dark">Calculating Proficiency...</h2>
-    </div>
-  );
+  if (loading) return <div className="app-container" style={{ textAlign: 'center', paddingTop: '10rem' }}><h2>Generating Report...</h2></div>;
+  if (!report) return <div className="app-container"><h2>Report not found</h2></div>;
 
   const passed = report.score >= report.passing_score;
-  const grade = report.score >= 90 ? 'A+' : report.score >= 75 ? 'A' : report.score >= 60 ? 'B' : report.score >= 40 ? 'C' : 'F';
-  
-  const correctCount = answers.filter(a => a.is_correct).length;
-  const correctnessPercent = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0;
 
   return (
-    <div className="max-w-6xl mx-auto py-10 space-y-10 animate-fade-in pb-20">
-      {/* Hero Result Section */}
-      <section className="grid md:grid-cols-3 gap-8 items-stretch">
-        <div className="glass-card p-12 md:col-span-2 flex flex-col justify-center items-center text-center relative overflow-hidden bg-white border-white">
-          <div className={`absolute top-0 left-0 w-full h-[10px] ${passed ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]'}`} />
-          
-          <div className={`w-32 h-32 rounded-full flex items-center justify-center mb-8 relative ${passed ? 'bg-emerald-50 text-emerald-500 shadow-xl shadow-emerald-100' : 'bg-red-50 text-red-500 shadow-xl shadow-red-100'}`}>
-            {passed ? <Award size={64} /> : <XCircle size={64} />}
-            <div className="absolute -bottom-2 -right-2 w-12 h-12 rounded-2xl bg-white border-4 border-white shadow-lg flex items-center justify-center font-black text-dark text-lg">
-              {grade}
-            </div>
-          </div>
-
-          <h1 className="text-5xl font-black text-text-dark tracking-tight mb-4">
-            {passed ? 'Exam Certification Earned!' : 'Assessment Not Cleared'}
-          </h1>
-          <p className="text-xl text-text-muted font-medium mb-12">
-            You attempted <span className="text-text-dark font-bold underline decoration-primary/20 underline-offset-4">{report.title}</span>
-          </p>
-
-          <div className="flex flex-wrap gap-6 justify-center">
-            <button onClick={() => navigate('/student')} className="btn-primary px-10 py-5 shadow-sky-200 flex items-center gap-3">
-               <Home size={20} /> Dashboard
-            </button>
-            <button className="btn-neumorph px-10 py-5 flex items-center gap-3">
-               <Download size={20} /> Result Transcript (PDF)
-            </button>
+    <div className="app-container animate-fade" style={{ maxWidth: '800px', paddingBottom: '5rem' }}>
+      {/* Hero Result */}
+      <section className="section-stack" style={{ textAlign: 'center', padding: '4rem 0' }}>
+        <div style={{ 
+          width: '160px', height: '160px', borderRadius: '50%', 
+          background: passed ? 'var(--bg-light)' : '#FEE2E2',
+          border: `8px solid ${passed ? 'var(--primary)' : '#DC2626'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 2rem', position: 'relative'
+        }}>
+          <h1 style={{ fontSize: '3.5rem', fontWeight: '900', color: passed ? 'var(--primary)' : '#DC2626' }}>{Math.round(report.score)}%</h1>
+          <div style={{ 
+            position: 'absolute', bottom: '-10px', background: passed ? 'var(--primary)' : '#DC2626',
+            color: 'white', padding: '0.4rem 1.2rem', borderRadius: '100px', fontSize: '0.8rem',
+            fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em'
+          }}>
+            {passed ? 'Passed' : 'Failed'}
           </div>
         </div>
 
-        {/* Quick Stats Sidebar */}
-        <div className="space-y-8">
-           <div className="glass-card p-10 bg-gradient-to-br from-white to-sky-50 border-white text-center">
-              <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-2">Final Cumulative Score</p>
-              <h2 className="text-6xl font-black text-primary tracking-tighter">{Math.round(report.score)}</h2>
-              <div className="w-full h-2 bg-white rounded-full mt-8 overflow-hidden border border-sky-100">
-                <div 
-                  className={`h-full transition-all duration-1000 ${passed ? 'bg-emerald-500' : 'bg-red-500'}`} 
-                  style={{ width: `${Math.min(100, (report.score / report.passing_score) * 100)}%` }} 
-                />
-              </div>
-              <p className="text-xs font-bold text-text-muted mt-4">Passing requirement: {report.passing_score} pts</p>
-           </div>
+        <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{passed ? 'Congratulations!' : 'Keep Learning!'}</h1>
+        <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto 2.5rem' }}>
+          You completed the <strong>{report.exam_title}</strong>. 
+          {passed ? ' You have successfully cleared the assessment and shared your proficiency.' : ' You were close! Review your answers below to improve for the next attempt.'}
+        </p>
 
-           <div className="glass-card p-10 space-y-6 bg-white border-white">
-              <div className="flex justify-between items-center">
-                 <div className="flex items-center gap-3">
-                    <div className="p-3 bg-sky-50 text-primary rounded-xl"><Trophy size={20} /></div>
-                    <p className="text-sm font-bold text-text-dark">Status</p>
-                 </div>
-                 <span className={`text-lg font-black ${passed ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {passed ? 'PASSED' : 'FAILED'}
-                 </span>
-              </div>
-              <div className="flex justify-between items-center">
-                 <div className="flex items-center gap-3">
-                    <div className="p-3 bg-emerald-50 text-emerald-500 rounded-xl"><CheckCircle size={20} /></div>
-                    <p className="text-sm font-bold text-text-dark">Correctness</p>
-                 </div>
-                 <span className="text-lg font-black text-emerald-500">{correctnessPercent}%</span>
-              </div>
-           </div>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+          <button className="btn-emerald" style={{ padding: '0.8rem 2rem' }} onClick={() => navigate('/student')}>
+            <Home size={18} /> Dashboard
+          </button>
+          <button className="btn-secondary" style={{ padding: '0.8rem 2rem' }}>
+            <Download size={18} /> Certificate
+          </button>
         </div>
       </section>
 
-      {/* Breakdown Grid */}
-      <section className="space-y-8">
-         <h3 className="text-2xl font-black text-text-dark flex items-center gap-3">
-           <BookOpen className="text-primary" /> Comprehensive Analytics
-         </h3>
-         <div className="glass-card divide-y divide-sky-50 bg-white border-white overflow-hidden">
-            {answers.map((ans, idx) => (
-              <div key={idx} className="p-8 flex flex-col gap-6 group hover:bg-sky-50/30 transition-all">
-                 <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-6">
-                       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm ${ans.is_correct ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
-                         {idx + 1}
-                       </div>
-                       <div>
-                          <p className="font-bold text-text-dark text-lg">{ans.text}</p>
-                          <p className="text-xs text-text-muted mt-1 uppercase tracking-widest font-black">Type: {ans.type.replace('_', ' ')} // {ans.marks_awarded} / {ans.max_marks} Marks</p>
-                       </div>
-                    </div>
-                    <div className="text-right">
-                       <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${ans.is_correct ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
-                         {ans.is_correct ? 'Correct' : 'Incorrect'}
-                       </span>
-                    </div>
-                 </div>
+      {/* Stats Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '4rem' }}>
+        <div className="card-clean" style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Passing Goal</p>
+          <h3 style={{ color: 'var(--text-main)' }}>{report.passing_score}%</h3>
+        </div>
+        <div className="card-clean" style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Time Taken</p>
+          <h3 style={{ color: 'var(--text-main)' }}>14:20</h3>
+        </div>
+      </div>
 
-                 <div className="grid md:grid-cols-2 gap-6 ml-16">
-                    <div className="p-6 rounded-2xl bg-sky-50/50 border border-sky-100">
-                       <p className="text-[10px] font-black text-text-muted uppercase mb-2 tracking-widest">Your Response</p>
-                       <p className="text-sm font-medium text-text-dark italic">"{ans.student_answer || 'No response recorded'}"</p>
-                    </div>
-                    <div className="p-6 rounded-2xl bg-emerald-50/30 border border-emerald-100">
-                       <p className="text-[10px] font-black text-emerald-600 uppercase mb-2 tracking-widest">Expected Solution</p>
-                       <p className="text-sm font-medium text-emerald-700 font-bold italic">"{ans.correct_answer}"</p>
-                    </div>
-                 </div>
+      {/* Question Breakdown */}
+      <section className="section-stack">
+        <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Zap size={24} style={{ color: 'var(--primary)' }} /> Question Review
+        </h2>
+        
+        <div className="section-stack">
+          {answers.map((ans, i) => (
+            <div key={i} className="card-clean" style={{ padding: '0' }}>
+              <div 
+                style={{ padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                onClick={() => setExpanded({...expanded, [i]: !expanded[i]})}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                  <div style={{ 
+                    width: '32px', height: '32px', borderRadius: '8px', 
+                    background: ans.is_correct ? 'var(--bg-light)' : '#FEE2E2',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: ans.is_correct ? 'var(--primary)' : '#DC2626'
+                  }}>
+                    {ans.is_correct ? <CheckCircle size={18} /> : <XCircle size={18} />}
+                  </div>
+                  <span style={{ fontWeight: '600' }}>{ans.text.substring(0, 60)}...</span>
+                </div>
+                {expanded[i] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </div>
 
-                 {ans.explanation && (
-                   <div className="ml-16 flex gap-4 p-4 bg-amber-50/30 rounded-2xl border border-amber-100/50">
-                      <HelpCircle size={18} className="text-amber-500 shrink-0" />
+              {expanded[i] && (
+                <div style={{ padding: '0 2rem 2rem', borderTop: '1px solid var(--border-color)', background: 'var(--surface-light)' }}>
+                  <div style={{ paddingTop: '2rem' }} className="section-stack">
+                    <div>
+                      <p style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Your Response</p>
+                      <p style={{ fontSize: '1rem', color: ans.is_correct ? 'var(--primary)' : '#DC2626', fontWeight: '600' }}>{ans.student_answer || '(No attempt)'}</p>
+                    </div>
+                    {!ans.is_correct && (
                       <div>
-                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Conceptual Rationale</p>
-                        <p className="text-xs text-amber-700 leading-relaxed font-medium">{ans.explanation}</p>
+                        <p style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Correct Answer</p>
+                        <p style={{ fontSize: '1rem', color: 'var(--text-main)', fontWeight: '600' }}>{ans.correct_answer}</p>
                       </div>
-                   </div>
-                 )}
-              </div>
-            ))}
-            {answers.length === 0 && (
-              <div className="p-20 text-center text-text-muted">
-                No question data available for this report.
-              </div>
-            )}
-         </div>
+                    )}
+                    {ans.explanation && (
+                      <div style={{ padding: '1rem', background: 'white', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>{ans.explanation}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );
 };
 
 export default Results;
+
